@@ -3,9 +3,22 @@ import json
 import logging
 import asyncio
 import requests
+import threading
+from flask import Flask
 from pathlib import Path
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, ContextTypes, filters
+
+# Render portini aniqlash (Web Service uchun)
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def health_check():
+    return "Bot is running!", 200
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app_flask.run(host='0.0.0.0', port=port)
 
 # Logging sozlamalari
 logging.basicConfig(
@@ -15,8 +28,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ================= SOZLAMALAR =================
-API_KEY = "8701423585:AAFH17u9SEbt8HPf80OwoLuOMF0EksNFkYk"
-OWNER_ID = 6581120108
+API_KEY = os.environ.get("API_KEY", "8701423585:AAFH17u9SEbt8HPf80OwoLuOMF0EksNFkYk")
+OWNER_ID = int(os.environ.get("OWNER_ID", "6581120108"))
 
 # Kataloglarni yaratish
 BASE_DIR = Path(__file__).parent
@@ -221,6 +234,9 @@ async def callback_query_handler(update: Update, context: ContextTypes.DEFAULT_T
         )
 
 def main():
+    # Flask-ni alohida thread-da ishga tushirish
+    threading.Thread(target=run_flask, daemon=True).start()
+    
     app = ApplicationBuilder().token(API_KEY).read_timeout(30).connect_timeout(30).build()
     
     app.add_handler(CommandHandler("start", start))
